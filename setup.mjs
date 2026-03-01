@@ -32,4 +32,9 @@ if (runOnceWorkflow) {
   fs.writeFileSync(".env.local", `\nSETUP_SCRIPT_RAN=1\n`, { flag: "a" });
 }
 
-process.exit(result.status);
+console.log("Running next codemod agents-md...");
+const codemodResult = spawnSync("npx", ["@next/codemod@canary", "agents-md", "-y"], {
+  stdio: "inherit",
+});
+
+process.exit(result.status || codemodResult.status || 0);
