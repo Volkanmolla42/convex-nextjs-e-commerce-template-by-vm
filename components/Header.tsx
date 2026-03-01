@@ -1,26 +1,21 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@/components/ui/button";
 import { storeConfig } from "@/lib/store-config";
-import { getGuestSessionId } from "@/lib/guest-session";
 import { isAdminEmail } from "@/lib/admin";
 import { ChevronDown, Menu, ShoppingBag, User, X } from "lucide-react";
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const guestSessionId = useMemo(
-    () => (typeof window === "undefined" ? undefined : getGuestSessionId()),
-    [],
-  );
 
   const user = useQuery(api.userFunctions.currentUser);
-  const cart = useQuery(api.cart.getActive, { guestSessionId });
+  const cart = useQuery(api.cart.getActive);
   const { signOut } = useAuthActions();
 
   const navItems = [

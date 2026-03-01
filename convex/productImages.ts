@@ -3,17 +3,14 @@ import type { Doc } from "./_generated/dataModel";
 
 type AnyCtx = QueryCtx | MutationCtx;
 
-export async function resolveProductImageUrl(
+export async function resolveVariantImageUrl(
   ctx: AnyCtx,
-  product: Doc<"products">,
+  variant: Doc<"productVariants">,
 ) {
-  if (product.imageStorageId) {
-    const storageUrl = await ctx.storage.getUrl(product.imageStorageId);
-    if (storageUrl) {
-      return storageUrl;
-    }
+  const storageUrl = await ctx.storage.getUrl(variant.imageStorageId);
+  if (storageUrl) {
+    return storageUrl;
   }
 
-  return product.image ?? "";
+  return "";
 }
-

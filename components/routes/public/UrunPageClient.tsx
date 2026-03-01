@@ -1,15 +1,14 @@
-﻿"use client";
+"use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { type Preloaded, useMutation, usePreloadedQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getGuestSessionId } from "@/lib/guest-session";
 import { storeConfig } from "@/lib/store-config";
 
 function formatPrice(price: number) {
@@ -20,26 +19,22 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-function ProductContent() {
-  const searchParams = useSearchParams();
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState("M");
-  const [cartStatus, setCartStatus] = useState("");
-  const guestSessionId = useMemo(
-    () => (typeof window === "undefined" ? undefined : getGuestSessionId()),
-    [],
-  );
+type UrunPageClientProps = {
+  preloadedProduct: Preloaded<typeof api.catalog.getPublicProductById>;
+  preloadedProducts: Preloaded<typeof api.catalog.listPublicProducts>;
+};
 
-  const productId = searchParams.get("id");
-  const parsedProductId = productId as Id<"products"> | null;
-
-  const product = useQuery(
-    api.products.getById,
-    parsedProductId ? { productId: parsedProductId } : "skip",
+export default function UrunPageClient({
+  preloadedProduct,
+  preloadedProducts,
+}: UrunPageClientProps) {
+  const product = usePreloadedQuery(preloadedProduct);
+  const products = usePreloadedQuery(preloadedProducts);
+  const [selectedVariantId, setSelectedVariantId] = useState<Id<"productVariants"> | null>(
+    null,
   );
-  const rawProducts = useQuery(api.products.listPublic);
-  const products = useMemo(() => rawProducts ?? [], [rawProducts]);
   const addItem = useMutation(api.cart.addItem);
+  const variants = useMemo(() => product?.variants ?? [], [product]);
 
   const suggestedProducts = useMemo(() => {
     if (!product) {
@@ -49,7 +44,7 @@ function ProductContent() {
     return products.filter((item) => item._id !== product._id).slice(0, 3);
   }, [product, products]);
 
-  if (!productId || product === null) {
+  if (product === null) {
     return (
       <main className="container mx-auto px-4 py-24 text-center">
         <h1>Urun bulunamadi</h1>
@@ -62,45 +57,42 @@ function ProductContent() {
     );
   }
 
-  if (!product) {
+  const selectedVariant =
+    variants.find((variant) => variant._id === selectedVariantId) ?? variants[0] ?? null;
+
+  if (!selectedVariant) {
     return (
       <main className="container mx-auto px-4 py-24 text-center">
-        <h1>Yukleniyor</h1>
+        <h1>Urun varyanti bulunamadi</h1>
       </main>
     );
   }
 
-  const images = [product.image];
-
-  const infoItems = [
-    { title: "Detaylar", content: product.details },
-    { title: "Bakim Talimatlari", content: product.careInstructions },
-    {
-      title: "Kargo ve Iade",
-      content:
-        "Tum siparislerde hizli teslimat sunulur. Teslimattan sonra 14 gun icinde iade yapilabilir.",
-    },
-  ];
+  const displayPrice = selectedVariant.price;
+  const availableStock = selectedVariant.stock;
 
   async function onAddToCart() {
     if (!product) {
       return;
     }
 
-    setCartStatus("");
+    if (selectedVariant.stock <= 0) {
+      toast.error("Secilen varyantta stok yok");
+      return;
+    }
+
     try {
       await addItem({
         productId: product._id,
+        variantId: selectedVariant._id,
         quantity: 1,
-        guestSessionId,
       });
-      setCartStatus("Urun sepete eklendi");
-      setTimeout(() => setCartStatus(""), 2000);
+      toast.success("Urun sepete eklendi");
     } catch (error) {
       if (error instanceof Error) {
-        setCartStatus(error.message);
+        toast.error(error.message);
       } else {
-        setCartStatus("Sepete eklenemedi");
+        toast.error("Sepete eklenemedi");
       }
     }
   }
@@ -123,25 +115,33 @@ function ProductContent() {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="flex flex-col-reverse gap-4 sm:gap-6 md:flex-row lg:col-span-7">
             <div className="no-scrollbar flex w-full shrink-0 gap-3 overflow-x-auto md:w-24 md:flex-col md:gap-4 md:overflow-visible">
-              {images.map((image, index) => (
+              {variants.map((variant) => (
                 <Button
                   type="button"
-                  key={image}
-                  onClick={() => setSelectedImage(index)}
+                  key={variant._id}
+                  onClick={() => setSelectedVariantId(variant._id)}
                   variant="outline"
                   className={cn(
                     "relative h-24 w-20 shrink-0 overflow-hidden p-0 md:h-28 md:w-full lg:h-32",
-                    selectedImage === index ? "border-denim" : "border-navy/10 opacity-60 hover:opacity-100",
+                    selectedVariant._id === variant._id
+                      ? "border-denim"
+                      : "border-navy/10 opacity-60 hover:opacity-100",
                   )}
                 >
-                  <Image src={image} alt={`Kucuk gorsel ${index + 1}`} fill className="object-cover" unoptimized />
+                  <Image
+                    src={variant.image}
+                    alt={`${product.name} ${variant.label}`}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
                 </Button>
               ))}
             </div>
 
             <div className="group relative h-[430px] w-full overflow-hidden sm:h-[520px] md:h-[680px] lg:h-[800px]">
               <Image
-                src={images[selectedImage]}
+                src={selectedVariant.image}
                 alt={product.name}
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -152,7 +152,8 @@ function ProductContent() {
 
           <div className="flex flex-col justify-start lg:col-span-5">
             <h1 className="mb-3 sm:mb-4">{product.name}</h1>
-            <p className="mb-6 text-lg font-light text-denim sm:mb-8 sm:text-xl">{formatPrice(product.price)}</p>
+            <p className="mb-2 text-lg font-light text-denim sm:text-xl">{formatPrice(displayPrice)}</p>
+            <p className="mb-6 text-sm text-navy/60 sm:mb-8">Stok: {availableStock}</p>
 
             <div className="mb-6 h-px w-12 bg-navy/20 sm:mb-8" />
 
@@ -160,47 +161,36 @@ function ProductContent() {
 
             <div className="mb-10">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-200 text-navy/60">Beden</span>
-                <Button type="button" variant="link" className="text-[10px]">
-                  Beden Rehberi
-                </Button>
+                <span className="text-xs font-semibold uppercase tracking-200 text-navy/60">Varyant</span>
               </div>
-              <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                {["S", "M", "L"].map((size) => (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {variants.map((variant) => (
                   <Button
                     type="button"
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
+                    key={variant._id}
+                    onClick={() => setSelectedVariantId(variant._id)}
                     variant="outline"
                     className={cn(
-                      "h-12 w-full tracking-widest",
-                      selectedSize === size
+                      "h-12 w-full justify-between px-3 text-xs",
+                      selectedVariant._id === variant._id
                         ? "border-denim text-denim hover:border-denim hover:text-denim"
                         : "border-navy/20 text-navy/60 hover:border-navy hover:text-navy",
                     )}
                   >
-                    {size}
+                    <span className="truncate">{variant.label}</span>
+                    <span>{formatPrice(variant.price)}</span>
                   </Button>
                 ))}
               </div>
             </div>
 
-            <Button className="h-12 w-full gap-2 tracking-180 sm:h-16 sm:gap-3 sm:tracking-250" onClick={() => void onAddToCart()}>
+            <Button
+              className="h-12 w-full gap-2 tracking-180 sm:h-16 sm:gap-3 sm:tracking-250"
+              onClick={() => void onAddToCart()}
+              disabled={availableStock <= 0}
+            >
               Sepete Ekle
             </Button>
-            {cartStatus ? <p className="mt-3 text-sm text-denim">{cartStatus}</p> : null}
-
-            <div className="mt-10 divide-y divide-navy/10 border-t border-navy/10 sm:mt-16">
-              {infoItems.map((item) => (
-                <div key={item.title} className="py-5 sm:py-6">
-                  <div className="flex items-center justify-between text-xs uppercase tracking-150 text-navy/80">
-                    {item.title}
-                    <span className="text-base text-denim">•</span>
-                  </div>
-                  <div className="mt-3 text-xs leading-relaxed text-navy/50 sm:mt-4">{item.content}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </main>
@@ -215,7 +205,7 @@ function ProductContent() {
           {suggestedProducts.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3">
               {suggestedProducts.map((item) => (
-                <Link key={item._id} href={`/urun?id=${item._id}`} className="group block">
+                <Link key={item._id} href={`/urun/${item._id}`} className="group block">
                   <div className="relative mb-4 h-[320px] overflow-hidden sm:mb-6 sm:h-[400px]">
                     <Image
                       src={item.image}
@@ -241,19 +231,5 @@ function ProductContent() {
         </div>
       </section>
     </>
-  );
-}
-
-export default function UrunPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-paper text-xs uppercase tracking-widest text-denim">
-          Yukleniyor...
-        </div>
-      }
-    >
-      <ProductContent />
-    </Suspense>
   );
 }

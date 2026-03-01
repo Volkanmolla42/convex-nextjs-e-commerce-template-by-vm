@@ -1,17 +1,17 @@
 ﻿"use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { type Preloaded, useMutation, usePreloadedQuery } from "convex/react";
 import { ChevronRight, CreditCard, Lock } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MobileBottomSummary } from "@/components/MobileBottomSummary";
-import { getGuestSessionId } from "@/lib/guest-session";
 import { storeConfig } from "@/lib/store-config";
 
 function formatPrice(price: number) {
@@ -21,36 +21,19 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-export default function OdemePage() {
-  const router = useRouter();
-  const [statusMessage, setStatusMessage] = useState("");
-  const guestSessionId = useMemo(
-    () => (typeof window === "undefined" ? undefined : getGuestSessionId()),
-    [],
-  );
+type OdemePageClientProps = {
+  preloadedCart: Preloaded<typeof api.cart.getActive>;
+};
 
-  const cart = useQuery(api.cart.getActive, { guestSessionId });
+export default function OdemePageClient({ preloadedCart }: OdemePageClientProps) {
+  const router = useRouter();
+  const cart = usePreloadedQuery(preloadedCart);
   const createOrder = useMutation(api.orders.createFromActiveCart);
 
-  if (cart === undefined) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-paper px-4 text-navy">
-        <div className="w-full max-w-md border border-navy/10 bg-paper p-8 text-center">
-          <h1>Yukleniyor</h1>
-        </div>
-      </div>
-    );
-  }
-
-  const items = cart.items;
+  const items = cart.items.filter((item): item is NonNullable<typeof item> => item !== null);
   const subtotal = cart.subtotal;
-  const shipping =
-    items.length === 0
-      ? 0
-      : subtotal >= storeConfig.commerce.freeShippingThreshold
-        ? 0
-        : storeConfig.commerce.shippingFee;
-  const total = subtotal + shipping;
+  const shipping = cart.shippingFee;
+  const total = cart.payableTotal;
 
   const inputClasses =
     "h-12 w-full rounded-none border-navy/20 bg-transparent font-light tracking-wide text-navy placeholder:text-navy/40 focus-visible:border-denim focus-visible:ring-1 focus-visible:ring-denim transition-colors";
@@ -58,13 +41,11 @@ export default function OdemePage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatusMessage("");
 
     const formData = new FormData(event.currentTarget);
 
     try {
       const result = await createOrder({
-        guestSessionId,
         customerName: String(formData.get("customerName") || ""),
         customerPhone: String(formData.get("customerPhone") || ""),
         customerCity: String(formData.get("customerCity") || ""),
@@ -73,15 +54,15 @@ export default function OdemePage() {
         customerApartment: String(formData.get("customerApartment") || "") || undefined,
       });
 
-      setStatusMessage(`Siparis olusturuldu: ${result.orderId}`);
+      toast.success(`Siparis olusturuldu: ${result.orderId}`);
       setTimeout(() => {
         router.push("/");
       }, 1200);
     } catch (error) {
       if (error instanceof Error) {
-        setStatusMessage(error.message);
+        toast.error(error.message);
       } else {
-        setStatusMessage("Siparis olusturulamadi");
+        toast.error("Siparis olusturulamadi");
       }
     }
   }
@@ -109,7 +90,7 @@ export default function OdemePage() {
 
       <ul className="space-y-3 lg:space-y-5">
         {items.map((item) => (
-          <li key={item.productId} className="flex items-start gap-3">
+          <li key={item.cartItemId} className="flex items-start gap-3">
             <div className="relative h-14 w-12 shrink-0 border border-navy/10 bg-paper lg:h-20 lg:w-16">
               <div className="absolute -right-2 -top-2 z-20 flex size-4 items-center justify-center rounded-full bg-navy/20 text-xs font-bold backdrop-blur-md lg:size-5">
                 {item.quantity}
@@ -119,6 +100,9 @@ export default function OdemePage() {
 
             <div className="min-w-0 flex-1">
               <h3 className="mb-1 truncate text-xs uppercase tracking-wide lg:text-sm">{item.name}</h3>
+              {item.variantLabel ? (
+                <p className="text-xs text-navy/60">{item.variantLabel}</p>
+              ) : null}
               <p className="text-xs tracking-widest text-navy/50">{formatPrice(item.price)}</p>
             </div>
 
@@ -148,7 +132,6 @@ export default function OdemePage() {
         <div className="relative flex flex-col gap-10 lg:flex-row lg:gap-16 xl:gap-24">
           <div className="w-full max-w-none flex-1 animate-fade-up-delay-1 lg:max-w-2xl">
             <h1 className="mb-8">Odeme ve Teslimat</h1>
-            {statusMessage ? <p className="mb-4 text-sm text-denim">{statusMessage}</p> : null}
 
             <form id="odeme-form" className="space-y-10 sm:space-y-12" onSubmit={(event) => void onSubmit(event)}>
               <section className="space-y-6">

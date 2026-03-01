@@ -4,7 +4,7 @@ import "./globals.css";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ThemeProvider } from "next-themes";
-import LayoutChrome from "@/components/LayoutChrome";
+import { Toaster } from "@/components/ui/sonner";
 import { storeConfig } from "@/lib/store-config";
 
 const nunitoSans = Nunito_Sans({
@@ -38,7 +38,8 @@ export default function RootLayout({
         <body className={`${nunitoSans.variable} ${cormorant.variable} antialiased`}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <ConvexClientProvider>
-              <LayoutChrome>{children}</LayoutChrome>
+              {children}
+              <Toaster richColors />
             </ConvexClientProvider>
           </ThemeProvider>
         </body>

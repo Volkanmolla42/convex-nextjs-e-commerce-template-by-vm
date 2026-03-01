@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { storeConfig } from "@/lib/store-config";
@@ -11,7 +12,6 @@ export default function GirisPage() {
   const { signIn } = useAuthActions();
   const router = useRouter();
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   return (
@@ -38,7 +38,6 @@ export default function GirisPage() {
             onSubmit={(event) => {
               event.preventDefault();
               setLoading(true);
-              setError(null);
               const formData = new FormData(event.currentTarget);
               formData.set("flow", flow);
 
@@ -47,7 +46,7 @@ export default function GirisPage() {
                   router.push("/");
                 })
                 .catch((requestError: { message: string }) => {
-                  setError(requestError.message);
+                  toast.error(requestError.message);
                   setLoading(false);
                 });
             }}
@@ -105,12 +104,6 @@ export default function GirisPage() {
                 {flow === "signIn" ? "Kayit Ol" : "Giris Yap"}
               </Button>
             </div>
-
-            {error ? (
-              <div className="mt-2 border border-destructive/30 p-4">
-                <p className="text-sm text-destructive">{error}</p>
-              </div>
-            ) : null}
           </form>
         </section>
 

@@ -1,7 +1,44 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { sanitizeText, slugify } from "./helpers";
 import { assertAdmin } from "./permissions";
+
+async function assertValidParentCategory(
+  ctx: MutationCtx,
+  categoryId: Id<"categories"> | null,
+  parentId: Id<"categories"> | null,
+) {
+  if (!parentId) {
+    return;
+  }
+
+  if (categoryId && categoryId === parentId) {
+    throw new Error("Kategori kendisinin ust kategorisi olamaz");
+  }
+
+  const parentCategory = await ctx.db.get(parentId);
+  if (!parentCategory) {
+    throw new Error("Ust kategori bulunamadi");
+  }
+
+  if (!categoryId) {
+    return;
+  }
+
+  let cursor = parentCategory;
+  while (cursor.parentId) {
+    if (cursor.parentId === categoryId) {
+      throw new Error("Kategori hiyerarsisinde dongu olusamaz");
+    }
+    const nextCategory = await ctx.db.get(cursor.parentId);
+    if (!nextCategory) {
+      break;
+    }
+    cursor = nextCategory;
+  }
+}
 
 export const listPublic = query({
   args: {},
@@ -42,6 +79,7 @@ export const create = mutation({
     name: v.string(),
     description: v.optional(v.string()),
     slug: v.optional(v.string()),
+    parentId: v.optional(v.id("categories")),
     isActive: v.optional(v.boolean()),
     sortOrder: v.optional(v.number()),
   },
@@ -67,11 +105,16 @@ export const create = mutation({
       throw new Error("Bu slug zaten kullaniliyor");
     }
 
+    if (args.parentId) {
+      await assertValidParentCategory(ctx, null, args.parentId);
+    }
+
     const now = Date.now();
 
     return await ctx.db.insert("categories", {
       name,
       slug,
+      parentId: args.parentId,
       description: args.description ? sanitizeText(args.description) : undefined,
       isActive: args.isActive ?? true,
       sortOrder: args.sortOrder ?? 0,
@@ -87,6 +130,7 @@ export const update = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     slug: v.optional(v.string()),
+    parentId: v.optional(v.union(v.id("categories"), v.null())),
     isActive: v.optional(v.boolean()),
     sortOrder: v.optional(v.number()),
   },
@@ -119,9 +163,14 @@ export const update = mutation({
       }
     }
 
+    if (args.parentId !== undefined) {
+      await assertValidParentCategory(ctx, args.categoryId, args.parentId);
+    }
+
     await ctx.db.patch(args.categoryId, {
       name: nextName,
       slug: nextSlug,
+      parentId: args.parentId === undefined ? category.parentId : args.parentId ?? undefined,
       description:
         args.description !== undefined
           ? sanitizeText(args.description) || undefined
@@ -140,6 +189,15 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     await assertAdmin(ctx);
 
+    const childCategories = await ctx.db
+      .query("categories")
+      .withIndex("parentId", (queryBuilder) => queryBuilder.eq("parentId", args.categoryId))
+      .collect();
+
+    if (childCategories.length > 0) {
+      throw new Error("Bu kategorinin alt kategorileri var");
+    }
+
     const products = await ctx.db
       .query("products")
       .withIndex("categoryId", (queryBuilder) => queryBuilder.eq("categoryId", args.categoryId))
@@ -152,4 +210,3 @@ export const remove = mutation({
     await ctx.db.delete(args.categoryId);
   },
 });
-

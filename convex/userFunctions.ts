@@ -9,6 +9,7 @@ export const currentUser = query({
     if (userId === null) {
       return null;
     }
+
     return await ctx.db.get("users", userId);
   },
 });
@@ -20,11 +21,13 @@ export const updateProfile = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
-      throw new Error("Not authenticated");
+      throw new Error("Giris gerekli");
     }
+
     await ctx.db.patch(userId, {
       ...(args.name !== undefined && { name: args.name }),
     });
+
     return await ctx.db.get(userId);
   },
 });

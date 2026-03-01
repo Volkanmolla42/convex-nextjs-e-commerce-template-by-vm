@@ -25,7 +25,6 @@ export type StoreConfig = {
     freeShippingThreshold: number;
   };
   featureFlags: {
-    guestCheckout: boolean;
     reviews: boolean;
     wishlist: boolean;
   };
@@ -58,7 +57,6 @@ export const storeConfig: StoreConfig = {
     freeShippingThreshold: 5000,
   },
   featureFlags: {
-    guestCheckout: true,
     reviews: true,
     wishlist: true,
   },

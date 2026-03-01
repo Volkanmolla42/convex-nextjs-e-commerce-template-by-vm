@@ -332,6 +332,8 @@ If a file violates these rules, fix it immediately without asking for confirmati
 - All routes must be Turkish.
 - Lowercase only.
 - Meaningful slugs.
+- Asla sadece `redirect()` yapan placeholder `page.tsx` olusturma.
+- Route degisikliklerinde geriye donuk route tutma, eski route dosyasini sil.
 
 ✅ `/hesabim`  
 ❌ `/account`

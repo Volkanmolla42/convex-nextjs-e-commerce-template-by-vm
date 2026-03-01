@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { requireAdminToken } from "@/lib/auth-server";
 
-export default function YonetimLayout({ children }: { children: ReactNode }) {
+export default async function YonetimLayout({ children }: { children: ReactNode }) {
+  await requireAdminToken();
+
   return (
     <main className="container mx-auto px-4 pb-16 pt-28 text-navy sm:pt-32">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
@@ -11,4 +14,3 @@ export default function YonetimLayout({ children }: { children: ReactNode }) {
     </main>
   );
 }
-

@@ -30,4 +30,3 @@ export async function assertAdmin(ctx: AuthCtx) {
 
   return user;
 }
-

@@ -4,55 +4,52 @@ import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { assertAdmin } from "./permissions";
-import { resolveProductImageUrl } from "./productImages";
+import {
+  calculateDiscount,
+  calculateNetTotal,
+  calculateShippingFee,
+} from "./pricing";
+import { resolveVariantImageUrl } from "./productImages";
 
-const SHIPPING_FEE = 50;
-const FREE_SHIPPING_THRESHOLD = 5000;
 const ORDER_CURRENCY = "TRY";
-
-type CartOwner =
-  | { userId: Id<"users">; guestSessionId?: undefined }
-  | { userId?: undefined; guestSessionId: string };
 
 type AnyCtx = QueryCtx | MutationCtx;
 
-async function resolveOwner(
-  ctx: AnyCtx,
-  guestSessionId: string | undefined,
-): Promise<CartOwner | null> {
-  const userId = await getAuthUserId(ctx);
-  if (userId) {
-    return { userId };
-  }
-
-  if (guestSessionId && guestSessionId.trim()) {
-    return { guestSessionId: guestSessionId.trim() };
-  }
-
-  return null;
+function generateOrderNo() {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `SP-${timestamp}-${random}`;
 }
 
-async function findActiveCart(ctx: AnyCtx, owner: CartOwner) {
-  if (owner.userId) {
-    return await ctx.db
-      .query("carts")
-      .withIndex("userId_status", (queryBuilder) =>
-        queryBuilder.eq("userId", owner.userId).eq("status", "active"),
-      )
-      .first();
+function getVariantLabel(attributes: Record<string, string>, sku: string) {
+  const parts = Object.entries(attributes).map(([key, value]) => `${key}: ${value}`);
+  if (parts.length === 0) {
+    return sku;
   }
 
+  return parts.join(" / ");
+}
+
+async function getRequiredUserId(ctx: AnyCtx): Promise<Id<"users">> {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
+    throw new Error("Giris gerekli");
+  }
+
+  return userId;
+}
+
+async function findActiveCartByUserId(ctx: AnyCtx, userId: Id<"users">) {
   return await ctx.db
     .query("carts")
-    .withIndex("guestSessionId_status", (queryBuilder) =>
-      queryBuilder.eq("guestSessionId", owner.guestSessionId).eq("status", "active"),
+    .withIndex("userId_status", (queryBuilder) =>
+      queryBuilder.eq("userId", userId).eq("status", "active"),
     )
     .first();
 }
 
 export const createFromActiveCart = mutation({
   args: {
-    guestSessionId: v.optional(v.string()),
     customerName: v.string(),
     customerPhone: v.string(),
     customerCity: v.string(),
@@ -61,12 +58,9 @@ export const createFromActiveCart = mutation({
     customerApartment: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const owner = await resolveOwner(ctx, args.guestSessionId);
-    if (!owner) {
-      throw new Error("Sepet sahibi bulunamadi");
-    }
+    const userId = await getRequiredUserId(ctx);
+    const cart = await findActiveCartByUserId(ctx, userId);
 
-    const cart = await findActiveCart(ctx, owner);
     if (!cart) {
       throw new Error("Aktif sepet bulunamadi");
     }
@@ -80,36 +74,43 @@ export const createFromActiveCart = mutation({
       throw new Error("Sepet bos");
     }
 
-    const products = await Promise.all(
-      cartItems.map((item) => ctx.db.get(item.productId)),
-    );
+    const [products, variants] = await Promise.all([
+      Promise.all(cartItems.map((item) => ctx.db.get(item.productId))),
+      Promise.all(cartItems.map((item) => ctx.db.get(item.variantId))),
+    ]);
 
     let subtotal = 0;
     for (let index = 0; index < cartItems.length; index += 1) {
       const product = products[index];
+      const variant = variants[index];
       const item = cartItems[index];
+
       if (!product || !product.isActive) {
         throw new Error("Sepette gecersiz urun var");
       }
 
-      if (item.quantity > product.stock) {
+      if (!variant || !variant.isActive || variant.productId !== product._id) {
+        throw new Error("Sepette gecersiz varyant var");
+      }
+      if (item.quantity > variant.stock) {
         throw new Error("Stok yetersiz");
       }
 
-      subtotal += product.price * item.quantity;
+      subtotal += item.unitPriceSnapshot * item.quantity;
     }
 
-    const shippingFee =
-      subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-    const total = subtotal + shippingFee;
+    const discount = calculateDiscount(subtotal);
+    const shippingFee = calculateShippingFee(subtotal);
+    const total = calculateNetTotal(subtotal, discount) + shippingFee;
     const now = Date.now();
 
     const orderId = await ctx.db.insert("orders", {
-      userId: owner.userId,
-      guestSessionId: owner.guestSessionId,
+      userId,
+      orderNo: generateOrderNo(),
       cartId: cart._id,
       status: "pending",
       subtotal,
+      discount,
       shippingFee,
       total,
       currency: ORDER_CURRENCY,
@@ -119,6 +120,12 @@ export const createFromActiveCart = mutation({
       customerProvince: args.customerProvince.trim(),
       customerAddress: args.customerAddress.trim(),
       customerApartment: args.customerApartment?.trim() || undefined,
+      addressSnapshot: {
+        city: args.customerCity.trim(),
+        district: args.customerProvince.trim(),
+        detail: args.customerAddress.trim(),
+        apartment: args.customerApartment?.trim() || undefined,
+      },
       createdAt: now,
       updatedAt: now,
     });
@@ -126,16 +133,21 @@ export const createFromActiveCart = mutation({
     for (let index = 0; index < cartItems.length; index += 1) {
       const item = cartItems[index];
       const product = products[index];
-      if (!product) {
+      const variant = variants[index];
+      if (!product || !variant) {
         continue;
       }
 
       await ctx.db.insert("orderItems", {
         orderId,
         productId: product._id,
+        variantId: variant._id,
+        name: `${product.name} (${getVariantLabel(variant.attributes, variant.sku)})`,
         productName: product.name,
-        productPrice: product.price,
-        productImage: await resolveProductImageUrl(ctx, product),
+        sku: variant.sku,
+        unitPriceSnapshot: item.unitPriceSnapshot,
+        productPrice: item.unitPriceSnapshot,
+        productImage: await resolveVariantImageUrl(ctx, variant),
         quantity: item.quantity,
         createdAt: now,
       });
@@ -192,7 +204,7 @@ export const listAdmin = query({
           .withIndex("orderId", (queryBuilder) => queryBuilder.eq("orderId", order._id))
           .collect();
 
-        const user = order.userId ? await ctx.db.get(order.userId) : null;
+        const user = await ctx.db.get(order.userId);
         return {
           ...order,
           userEmail: user?.email ?? "",
