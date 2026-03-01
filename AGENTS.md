@@ -244,6 +244,7 @@ Do not postpone technical debt.
 - Follow existing spacing.
 - Follow typography scale.
 - Follow color system.
+- Always use shadcn components for any UI primitives or elements.
 - Do not invent new patterns unnecessarily.
 
 ## 10.3 UI Text Minimalism (Strict)
@@ -291,7 +292,18 @@ If a non-standard value is truly required:
 
 Default policy: no hardcoded visual values unless there is a documented system-level exception.
 
-If any file violates these rules, fix it immediately without asking for confirmation, while keeping visual intent aligned with design language.
+## 10.5 Semantic Color Discipline (Strict)
+
+- **NEVER** use hardcoded Tailwind colors (e.g., `text-gray-500`, `bg-red-700`) or hex codes (e.g., `#352342`) unless it is a very specific, unique edge case.
+- **ALWAYS** use semantic color tokens:
+  - `primary`, `secondary`, `accent`, `muted`, `destructive`, `background`, `foreground`, `border`, `input`, `ring`.
+- **Reasoning & Benefits:**
+  - **Dynamic Theming:** Semantic tokens automatically adapt to Dark Mode/Light Mode.
+  - **Consistency:** Ensures a unified look across the entire application.
+  - **Maintainability:** A single change in `globals.css` updates the entire UI instantly.
+  - **Accessibility:** Semantic tokens are mapped to tested contrast ratios.
+
+If a file violates these rules, fix it immediately without asking for confirmation, while keeping visual intent aligned with design language.
 
 ---
 
@@ -306,6 +318,7 @@ If any file violates these rules, fix it immediately without asking for confirma
 
 - Always use shadcn components.
 - Do not recreate primitives if shadcn has them.
+- To add a new shadcn component, use: `bunx --bun shadcn@latest add <component-name>` (e.g., `bunx --bun shadcn@latest add button`)
 
 ## Navigation
 
