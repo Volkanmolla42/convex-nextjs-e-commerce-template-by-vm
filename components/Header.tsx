@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@/components/ui/button";
 import { storeConfig } from "@/lib/store-config";
-import { isAdminEmail } from "@/lib/admin";
+import { isAdmin } from "@/lib/admin";
 import { ChevronDown, Menu, ShoppingBag, User, X } from "lucide-react";
 
 export default function Header() {
@@ -29,7 +29,7 @@ export default function Header() {
       setScrolled(window.scrollY > 50);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -40,7 +40,7 @@ export default function Header() {
     };
   }, [mobileMenuOpen]);
 
-  const isAdmin = isAdminEmail(user?.email);
+  const isUserAdmin = isAdmin(user);
   const cartCount = cart?.totalItems ?? 0;
 
   return (
@@ -92,7 +92,7 @@ export default function Header() {
                     >
                       HESABIM
                     </Link>
-                    {isAdmin ? (
+                    {isUserAdmin ? (
                       <Link
                         href="/yonetim"
                         className="px-4 py-2 text-xs tracking-200 text-navy/70 transition-colors duration-200 hover:bg-navy/5 hover:text-navy"
@@ -180,7 +180,7 @@ export default function Header() {
                       HESABIM
                     </Link>
                   </Button>
-                  {isAdmin ? (
+                  {isUserAdmin ? (
                     <Button
                       asChild
                       variant="nav"

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type ProductVariantFormState = {
+  clientKey: string;
   sku: string;
   color: string;
   size: string;
@@ -39,6 +40,7 @@ const emptyForm: ProductFormState = {
 
 function createEmptyVariant(): ProductVariantFormState {
   return {
+    clientKey: crypto.randomUUID(),
     sku: "",
     color: "",
     size: "",
@@ -145,10 +147,10 @@ export default function YonetimUrunEklePageClient({
   }
 
   return (
-    <section className="border border-navy/10 p-4 sm:p-6">
-      <h1>Urun Ekle</h1>
+    <section className="rounded-lg border border-border bg-background p-6">
+      <h1 className="text-2xl">Urun Ekle</h1>
 
-      <form className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2" onSubmit={onSubmit}>
+      <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
         <div className="space-y-2">
           <Label htmlFor="name">Urun Adi</Label>
           <Input
@@ -169,7 +171,7 @@ export default function YonetimUrunEklePageClient({
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <Label>Kategori Secimi</Label>
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
@@ -186,7 +188,7 @@ export default function YonetimUrunEklePageClient({
           </div>
         </div>
 
-        <div className="md:col-span-2 flex flex-wrap gap-2">
+        <div className="md:col-span-2 flex flex-wrap gap-3">
           <Button
             type="button"
             size="sm"
@@ -205,9 +207,9 @@ export default function YonetimUrunEklePageClient({
           </Button>
         </div>
 
-        <div className="md:col-span-2 border border-navy/10 p-4">
+        <div className="md:col-span-2 rounded-lg border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <h2>Varyantlar</h2>
+            <h2 className="text-lg font-medium">Varyantlar</h2>
             <Button
               type="button"
               size="sm"
@@ -219,11 +221,11 @@ export default function YonetimUrunEklePageClient({
             </Button>
           </div>
 
-          <div className="mt-3 space-y-3">
+          <div className="mt-4 space-y-3">
             {variants.map((variant, index) => (
               <div
-                key={`${variant.sku}-${index}`}
-                className="grid grid-cols-1 gap-2 border border-navy/10 p-3 md:grid-cols-7"
+                key={variant.clientKey}
+                className="grid gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-7"
               >
                 <Input
                   placeholder="SKU"
@@ -299,7 +301,16 @@ export default function YonetimUrunEklePageClient({
                       )
                     }
                   />
-                  <p className="text-xs text-navy/50">
+                  {variant.imageFile && (
+                    <div className="relative h-20 w-20 overflow-hidden rounded border border-border">
+                      <img
+                        src={URL.createObjectURL(variant.imageFile)}
+                        alt="Onizleme"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
                     {variant.imageFile ? variant.imageFile.name : "Gorsel secilmedi"}
                   </p>
                 </div>
@@ -341,7 +352,7 @@ export default function YonetimUrunEklePageClient({
         </div>
 
         <div className="md:col-span-2">
-          <Button type="submit">Urun Ekle</Button>
+          <Button type="submit" size="lg">Urun Ekle</Button>
         </div>
       </form>
     </section>

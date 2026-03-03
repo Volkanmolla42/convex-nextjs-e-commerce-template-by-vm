@@ -15,10 +15,10 @@ const buttonVariants = cva(
         outlineGold:
           "border border-navy/20 bg-transparent text-navy/60 hover:border-denim hover:text-denim",
         ghost: "bg-transparent text-navy/70 hover:text-navy",
-        nav: "bg-transparent text-navy/70 hover:text-navy hover:bg-navy/5 duration-200",
+        nav: "bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent duration-200",
         danger:
-          "border border-navy/10 bg-transparent text-navy/50 hover:border-red-500/30 hover:text-red-400",
-        link: "h-auto border-0 bg-transparent p-0 text-navy/40 tracking-wider underline underline-offset-4 hover:text-denim",
+          "border border-border bg-transparent text-muted-foreground hover:border-destructive/30 hover:text-destructive",
+        link: "h-auto border-0 bg-transparent p-0 text-muted-foreground tracking-wider underline underline-offset-4 hover:text-primary",
       },
       size: {
         default: "h-12 px-8",

@@ -10,7 +10,20 @@ export const currentUser = query({
       return null;
     }
 
-    return await ctx.db.get("users", userId);
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      return null;
+    }
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .first();
+
+    return {
+      ...user,
+      role: profile?.role ?? "customer",
+    };
   },
 });
 

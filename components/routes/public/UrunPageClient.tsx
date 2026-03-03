@@ -132,6 +132,7 @@ export default function UrunPageClient({
                     src={variant.image}
                     alt={`${product.name} ${variant.label}`}
                     fill
+                    sizes="96px"
                     className="object-cover"
                     unoptimized
                   />
@@ -144,6 +145,7 @@ export default function UrunPageClient({
                 src={selectedVariant.image}
                 alt={product.name}
                 fill
+                sizes="(max-width: 767px) 100vw, (max-width: 1023px) 70vw, 58vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                 unoptimized
               />
@@ -211,6 +213,7 @@ export default function UrunPageClient({
                       src={item.image}
                       alt={item.name}
                       fill
+                      sizes="(max-width: 767px) 100vw, 33vw"
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                       unoptimized
                     />

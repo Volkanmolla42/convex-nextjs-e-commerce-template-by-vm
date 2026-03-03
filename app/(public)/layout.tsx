@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
-    <main className="min-h-screen text-navy py-16">
+    <main className="min-h-screen py-16">
       <Header />
       {children}
       <Footer />

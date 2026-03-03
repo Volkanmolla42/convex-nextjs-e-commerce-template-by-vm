@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useReducer } from "react";
 import { type Preloaded, useMutation, usePreloadedQuery } from "convex/react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -24,6 +24,25 @@ type AddressFormValues = {
   isDefault: boolean;
 };
 
+type AddressesUiState = {
+  createValues: AddressFormValues;
+  editValues: AddressFormValues;
+  editingAddressId: Id<"addresses"> | null;
+  isCreating: boolean;
+  isUpdating: boolean;
+  settingDefaultAddressId: Id<"addresses"> | null;
+};
+
+type AddressUiAction =
+  | { type: "setCreateField"; field: keyof AddressFormValues; value: string | boolean }
+  | { type: "setEditField"; field: keyof AddressFormValues; value: string | boolean }
+  | { type: "setCreating"; value: boolean }
+  | { type: "setUpdating"; value: boolean }
+  | { type: "setSettingDefaultAddressId"; value: Id<"addresses"> | null }
+  | { type: "setEditingAddress"; addressId: Id<"addresses">; values: AddressFormValues }
+  | { type: "clearEditingAddress" }
+  | { type: "resetCreateValues" };
+
 const EMPTY_ADDRESS_FORM: AddressFormValues = {
   title: "",
   city: "",
@@ -32,6 +51,64 @@ const EMPTY_ADDRESS_FORM: AddressFormValues = {
   postalCode: "",
   isDefault: false,
 };
+
+const INITIAL_UI_STATE: AddressesUiState = {
+  createValues: EMPTY_ADDRESS_FORM,
+  editValues: EMPTY_ADDRESS_FORM,
+  editingAddressId: null,
+  isCreating: false,
+  isUpdating: false,
+  settingDefaultAddressId: null,
+};
+
+function addressesUiReducer(state: AddressesUiState, action: AddressUiAction): AddressesUiState {
+  switch (action.type) {
+    case "setCreateField":
+      return {
+        ...state,
+        createValues: { ...state.createValues, [action.field]: action.value },
+      };
+    case "setEditField":
+      return {
+        ...state,
+        editValues: { ...state.editValues, [action.field]: action.value },
+      };
+    case "setCreating":
+      return {
+        ...state,
+        isCreating: action.value,
+      };
+    case "setUpdating":
+      return {
+        ...state,
+        isUpdating: action.value,
+      };
+    case "setSettingDefaultAddressId":
+      return {
+        ...state,
+        settingDefaultAddressId: action.value,
+      };
+    case "setEditingAddress":
+      return {
+        ...state,
+        editingAddressId: action.addressId,
+        editValues: action.values,
+      };
+    case "clearEditingAddress":
+      return {
+        ...state,
+        editingAddressId: null,
+        editValues: EMPTY_ADDRESS_FORM,
+      };
+    case "resetCreateValues":
+      return {
+        ...state,
+        createValues: EMPTY_ADDRESS_FORM,
+      };
+    default:
+      return state;
+  }
+}
 
 function getAddressFormValues(address: {
   title: string;
@@ -142,34 +219,24 @@ export default function HesabimAdreslerPageClient({
   const updateAddress = useMutation(api.addresses.update);
   const setDefaultAddress = useMutation(api.addresses.setDefault);
 
-  const [createValues, setCreateValues] = useState<AddressFormValues>(EMPTY_ADDRESS_FORM);
-  const [editValues, setEditValues] = useState<AddressFormValues>(EMPTY_ADDRESS_FORM);
-  const [editingAddressId, setEditingAddressId] = useState<Id<"addresses"> | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [settingDefaultAddressId, setSettingDefaultAddressId] =
-    useState<Id<"addresses"> | null>(null);
-
-  const editingAddress = useMemo(
-    () => addresses.find((address) => address._id === editingAddressId) ?? null,
-    [addresses, editingAddressId],
-  );
+  const [uiState, dispatch] = useReducer(addressesUiReducer, INITIAL_UI_STATE);
+  const editingAddress = addresses.find((address) => address._id === uiState.editingAddressId) ?? null;
 
   function updateCreateValues(field: keyof AddressFormValues, value: string | boolean) {
-    setCreateValues((prev) => ({ ...prev, [field]: value }));
+    dispatch({ type: "setCreateField", field, value });
   }
 
   function updateEditValues(field: keyof AddressFormValues, value: string | boolean) {
-    setEditValues((prev) => ({ ...prev, [field]: value }));
+    dispatch({ type: "setEditField", field, value });
   }
 
   async function handleCreateAddress() {
-    setIsCreating(true);
+    dispatch({ type: "setCreating", value: true });
 
     try {
-      await createAddress(createValues);
+      await createAddress(uiState.createValues);
       toast.success("Adres eklendi");
-      setCreateValues(EMPTY_ADDRESS_FORM);
+      dispatch({ type: "resetCreateValues" });
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
@@ -177,25 +244,24 @@ export default function HesabimAdreslerPageClient({
         toast.error("Adres eklenemedi");
       }
     } finally {
-      setIsCreating(false);
+      dispatch({ type: "setCreating", value: false });
     }
   }
 
   async function handleUpdateAddress() {
-    if (!editingAddressId) {
+    if (!uiState.editingAddressId) {
       return;
     }
 
-    setIsUpdating(true);
+    dispatch({ type: "setUpdating", value: true });
 
     try {
       await updateAddress({
-        addressId: editingAddressId,
-        ...editValues,
+        addressId: uiState.editingAddressId,
+        ...uiState.editValues,
       });
       toast.success("Adres guncellendi");
-      setEditingAddressId(null);
-      setEditValues(EMPTY_ADDRESS_FORM);
+      dispatch({ type: "clearEditingAddress" });
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
@@ -203,12 +269,12 @@ export default function HesabimAdreslerPageClient({
         toast.error("Adres guncellenemedi");
       }
     } finally {
-      setIsUpdating(false);
+      dispatch({ type: "setUpdating", value: false });
     }
   }
 
   async function handleSetDefaultAddress(addressId: Id<"addresses">) {
-    setSettingDefaultAddressId(addressId);
+    dispatch({ type: "setSettingDefaultAddressId", value: addressId });
 
     try {
       await setDefaultAddress({ addressId });
@@ -220,7 +286,7 @@ export default function HesabimAdreslerPageClient({
         toast.error("Varsayilan adres secilemedi");
       }
     } finally {
-      setSettingDefaultAddressId(null);
+      dispatch({ type: "setSettingDefaultAddressId", value: null });
     }
   }
 
@@ -232,11 +298,11 @@ export default function HesabimAdreslerPageClient({
         <h3>Yeni Adres</h3>
         <AddressForm
           idPrefix="yeni"
-          values={createValues}
+          values={uiState.createValues}
           onChange={updateCreateValues}
           onSubmit={handleCreateAddress}
           submitLabel="Adres Ekle"
-          isSubmitting={isCreating}
+          isSubmitting={uiState.isCreating}
         />
       </div>
 
@@ -248,7 +314,7 @@ export default function HesabimAdreslerPageClient({
         <div className="space-y-3">
           {addresses.map((address) => {
             const isEditing = editingAddress?._id === address._id;
-            const isSettingDefault = settingDefaultAddressId === address._id;
+            const isSettingDefault = uiState.settingDefaultAddressId === address._id;
 
             return (
               <article key={address._id} className="space-y-3 border border-border p-4">
@@ -277,13 +343,15 @@ export default function HesabimAdreslerPageClient({
                       size="sm"
                       onClick={() => {
                         if (isEditing) {
-                          setEditingAddressId(null);
-                          setEditValues(EMPTY_ADDRESS_FORM);
+                          dispatch({ type: "clearEditingAddress" });
                           return;
                         }
 
-                        setEditingAddressId(address._id);
-                        setEditValues(getAddressFormValues(address));
+                        dispatch({
+                          type: "setEditingAddress",
+                          addressId: address._id,
+                          values: getAddressFormValues(address),
+                        });
                       }}
                     >
                       {isEditing ? "Iptal" : "Duzenle"}
@@ -298,11 +366,11 @@ export default function HesabimAdreslerPageClient({
                 {isEditing ? (
                   <AddressForm
                     idPrefix={`duzenle-${address._id}`}
-                    values={editValues}
+                    values={uiState.editValues}
                     onChange={updateEditValues}
                     onSubmit={handleUpdateAddress}
                     submitLabel="Kaydet"
-                    isSubmitting={isUpdating}
+                    isSubmitting={uiState.isUpdating}
                   />
                 ) : null}
               </article>

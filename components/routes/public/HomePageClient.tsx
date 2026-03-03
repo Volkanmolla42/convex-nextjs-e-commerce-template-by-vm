@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { type Preloaded, useMutation, usePreloadedQuery } from "convex/react";
@@ -62,7 +62,6 @@ export default function HomePageClient({
   const products = usePreloadedQuery(preloadedProducts);
   const categories = usePreloadedQuery(preloadedCategories);
   const addItem = useMutation(api.cart.addItem);
-
   const categoryTabs = useMemo(
     () => ["Tumu", ...categories.map((item) => item.name)],
     [categories],
@@ -142,6 +141,7 @@ export default function HomePageClient({
                     src={heroProduct.image}
                     alt={heroProduct.name}
                     fill
+                    sizes="(max-width: 1023px) 100vw, 66vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     unoptimized
                   />
@@ -166,6 +166,7 @@ export default function HomePageClient({
                         src={card.product.image}
                         alt={card.title}
                         fill
+                        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         unoptimized
                       />
@@ -268,6 +269,7 @@ export default function HomePageClient({
                       src={product.image}
                       alt={product.name}
                       fill
+                      sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 25vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       unoptimized
                     />
@@ -318,6 +320,7 @@ export default function HomePageClient({
                       src={product.image}
                       alt={product.name}
                       fill
+                      sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       unoptimized
                     />

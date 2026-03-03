@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { type Preloaded, useMutation, usePreloadedQuery } from "convex/react";
 import { ChevronRight, CreditCard, Lock } from "lucide-react";
 import { toast } from "sonner";
+import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,69 @@ function formatPrice(price: number) {
 type OdemePageClientProps = {
   preloadedCart: Preloaded<typeof api.cart.getActive>;
 };
+
+type OrderSummaryItem = {
+  cartItemId: Id<"cartItems">;
+  image: string;
+  name: string;
+  variantLabel?: string | null;
+  price: number;
+  quantity: number;
+};
+
+function OrderSummary({
+  items,
+  subtotal,
+  shipping,
+}: {
+  items: OrderSummaryItem[];
+  subtotal: number;
+  shipping: number;
+}) {
+  return (
+    <>
+      <h4 className="mb-3 border-b border-navy/10 pb-2 text-xs uppercase tracking-widest lg:mb-4 lg:pb-3 lg:text-sm">
+        Siparis Ozeti
+      </h4>
+
+      <ul className="space-y-3 lg:space-y-5">
+        {items.map((item) => (
+          <li key={item.cartItemId} className="flex items-start gap-3">
+            <div className="relative h-14 w-12 shrink-0 border border-navy/10 bg-paper lg:h-20 lg:w-16">
+              <div className="absolute -right-2 -top-2 z-20 flex size-4 items-center justify-center rounded-full bg-navy/20 text-xs font-bold backdrop-blur-md lg:size-5">
+                {item.quantity}
+              </div>
+              <Image src={item.image} alt={item.name} fill className="object-cover opacity-80" sizes="64px" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h3 className="mb-1 truncate text-xs uppercase tracking-wide lg:text-sm">{item.name}</h3>
+              {item.variantLabel ? (
+                <p className="text-xs text-navy/60">{item.variantLabel}</p>
+              ) : null}
+              <p className="text-xs tracking-widest text-navy/50">{formatPrice(item.price)}</p>
+            </div>
+
+            <div className="shrink-0 text-right">
+              <span className="text-xs tracking-wide lg:text-sm">{formatPrice(item.price * item.quantity)}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="space-y-2 pt-4 text-xs font-light tracking-wide lg:space-y-4 lg:pt-6 lg:text-sm lg:tracking-wider">
+        <div className="flex justify-between text-navy/70">
+          <span>Ara Toplam</span>
+          <span>{formatPrice(subtotal)}</span>
+        </div>
+        <div className="flex justify-between text-navy/70">
+          <span>Kargo</span>
+          <span>{shipping === 0 ? "Ucretsiz" : formatPrice(shipping)}</span>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function OdemePageClient({ preloadedCart }: OdemePageClientProps) {
   const router = useRouter();
@@ -81,50 +145,6 @@ export default function OdemePageClient({ preloadedCart }: OdemePageClientProps)
       </div>
     );
   }
-
-  const renderOrderSummary = () => (
-    <>
-      <h4 className="mb-3 border-b border-navy/10 pb-2 text-xs uppercase tracking-widest lg:mb-4 lg:pb-3 lg:text-sm">
-        Siparis Ozeti
-      </h4>
-
-      <ul className="space-y-3 lg:space-y-5">
-        {items.map((item) => (
-          <li key={item.cartItemId} className="flex items-start gap-3">
-            <div className="relative h-14 w-12 shrink-0 border border-navy/10 bg-paper lg:h-20 lg:w-16">
-              <div className="absolute -right-2 -top-2 z-20 flex size-4 items-center justify-center rounded-full bg-navy/20 text-xs font-bold backdrop-blur-md lg:size-5">
-                {item.quantity}
-              </div>
-              <Image src={item.image} alt={item.name} fill className="object-cover opacity-80" sizes="64px" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <h3 className="mb-1 truncate text-xs uppercase tracking-wide lg:text-sm">{item.name}</h3>
-              {item.variantLabel ? (
-                <p className="text-xs text-navy/60">{item.variantLabel}</p>
-              ) : null}
-              <p className="text-xs tracking-widest text-navy/50">{formatPrice(item.price)}</p>
-            </div>
-
-            <div className="shrink-0 text-right">
-              <span className="text-xs tracking-wide lg:text-sm">{formatPrice(item.price * item.quantity)}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <div className="space-y-2 pt-4 text-xs font-light tracking-wide lg:space-y-4 lg:pt-6 lg:text-sm lg:tracking-wider">
-        <div className="flex justify-between text-navy/70">
-          <span>Ara Toplam</span>
-          <span>{formatPrice(subtotal)}</span>
-        </div>
-        <div className="flex justify-between text-navy/70">
-          <span>Kargo</span>
-          <span>{shipping === 0 ? "Ucretsiz" : formatPrice(shipping)}</span>
-        </div>
-      </div>
-    </>
-  );
 
   return (
     <div className="flex min-h-screen flex-col bg-paper pb-28 pt-8 text-navy selection:bg-denim selection:text-background dark:selection:text-foreground sm:pt-10 lg:pb-20">
@@ -249,14 +269,14 @@ export default function OdemePageClient({ preloadedCart }: OdemePageClientProps)
 
           <div className="hidden w-full shrink-0 animate-fade-up-delay-2 lg:block lg:w-[420px]">
             <div className="border border-navy/10 bg-paper/40 p-5 backdrop-blur-sm sm:p-8 lg:sticky lg:top-28">
-              {renderOrderSummary()}
+              <OrderSummary items={items} subtotal={subtotal} shipping={shipping} />
             </div>
           </div>
         </div>
       </div>
 
       <MobileBottomSummary
-        summary={renderOrderSummary()}
+        summary={<OrderSummary items={items} subtotal={subtotal} shipping={shipping} />}
         totalValue={formatPrice(total)}
         action={
           <Button

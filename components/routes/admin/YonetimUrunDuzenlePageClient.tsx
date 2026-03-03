@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { type Dispatch, type FormEvent, type SetStateAction, useState } from "react";
 import Link from "next/link";
 import { type Preloaded, useMutation, usePreloadedQuery } from "convex/react";
 import { Plus, Trash2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type ProductVariantFormState = {
+  clientKey: string;
   sku: string;
   color: string;
   size: string;
@@ -57,6 +58,7 @@ type AdminProduct = {
 
 function createEmptyVariant(): ProductVariantFormState {
   return {
+    clientKey: crypto.randomUUID(),
     sku: "",
     color: "",
     size: "",
@@ -74,6 +76,168 @@ function parsePositiveNumber(value: string, fieldName: string) {
     throw new Error(`${fieldName} gecersiz`);
   }
   return parsed;
+}
+
+type VaryantEditorProps = {
+  variants: ProductVariantFormState[];
+  setVariants: Dispatch<SetStateAction<ProductVariantFormState[]>>;
+};
+
+function VaryantEditor({ variants, setVariants }: VaryantEditorProps) {
+  return (
+    <div className="md:col-span-2 rounded-lg border border-border bg-card p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium">Varyantlar</h2>
+        <Button
+          type="button"
+          size="sm"
+          variant="outlineGold"
+          onClick={() => setVariants((prev) => [...prev, createEmptyVariant()])}
+        >
+          <Plus className="mr-1 size-4" />
+          Varyant Ekle
+        </Button>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {variants.map((variant, index) => (
+          <div
+            key={variant.clientKey}
+            className="grid gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-7"
+          >
+            <Input
+              placeholder="SKU"
+              value={variant.sku}
+              onChange={(event) =>
+                setVariants((prev) =>
+                  prev.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, sku: event.target.value } : item,
+                  ),
+                )
+              }
+            />
+            <Input
+              placeholder="Renk"
+              value={variant.color}
+              onChange={(event) =>
+                setVariants((prev) =>
+                  prev.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, color: event.target.value } : item,
+                  ),
+                )
+              }
+            />
+            <Input
+              placeholder="Beden"
+              value={variant.size}
+              onChange={(event) =>
+                setVariants((prev) =>
+                  prev.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, size: event.target.value } : item,
+                  ),
+                )
+              }
+            />
+            <Input
+              placeholder="Fiyat"
+              type="number"
+              min={0}
+              step={0.01}
+              value={variant.price}
+              onChange={(event) =>
+                setVariants((prev) =>
+                  prev.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, price: event.target.value } : item,
+                  ),
+                )
+              }
+            />
+            <Input
+              placeholder="Stok"
+              type="number"
+              min={0}
+              value={variant.stock}
+              onChange={(event) =>
+                setVariants((prev) =>
+                  prev.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, stock: event.target.value } : item,
+                  ),
+                )
+              }
+            />
+            <div className="space-y-2">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(event) =>
+                  setVariants((prev) =>
+                    prev.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? {
+                            ...item,
+                            imageFile: event.target.files?.[0] ?? null,
+                          }
+                        : item,
+                    ),
+                  )
+                }
+              />
+              {variant.imageFile ? (
+                <div className="relative h-20 w-20 overflow-hidden rounded border border-border">
+                  <img
+                    src={URL.createObjectURL(variant.imageFile)}
+                    alt="Onizleme"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : variant.imageStorageId ? (
+                <p className="text-xs text-muted-foreground">Yuklu gorsel mevcut</p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                {variant.imageFile
+                  ? variant.imageFile.name
+                  : variant.imageStorageId
+                    ? "Yuklu gorsel"
+                    : "Gorsel secilmedi"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={variant.isActive ? "default" : "outlineGold"}
+                onClick={() =>
+                  setVariants((prev) =>
+                    prev.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? { ...item, isActive: !item.isActive }
+                        : item,
+                    ),
+                  )
+                }
+              >
+                {variant.isActive ? "Aktif" : "Pasif"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() =>
+                  setVariants((prev) =>
+                    prev.length === 1
+                      ? [createEmptyVariant()]
+                      : prev.filter((_, itemIndex) => itemIndex !== index),
+                  )
+                }
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function EditProductForm({
@@ -96,6 +260,7 @@ function EditProductForm({
   const [variants, setVariants] = useState<ProductVariantFormState[]>(
     product.variants && product.variants.length > 0
       ? product.variants.map((variant) => ({
+          clientKey: variant._id,
           sku: variant.sku,
           color: variant.attributes.Renk ?? "",
           size: variant.attributes.Beden ?? "",
@@ -185,15 +350,15 @@ function EditProductForm({
   }
 
   return (
-    <section className="border border-navy/10 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1>Urun Duzenle</h1>
-        <Button asChild variant="outlineGold">
+    <section className="rounded-lg border border-border bg-background p-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl">Urun Duzenle</h1>
+        <Button asChild variant="outlineGold" size="lg">
           <Link href="/yonetim/urunler">Listeye Don</Link>
         </Button>
       </div>
 
-      <form className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2" onSubmit={onSubmit}>
+      <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
         <div className="space-y-2">
           <Label htmlFor="name">Urun Adi</Label>
           <Input
@@ -214,7 +379,7 @@ function EditProductForm({
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <Label>Kategori Secimi</Label>
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
@@ -231,7 +396,7 @@ function EditProductForm({
           </div>
         </div>
 
-        <div className="md:col-span-2 flex flex-wrap gap-2">
+        <div className="md:col-span-2 flex flex-wrap gap-3">
           <Button
             type="button"
             size="sm"
@@ -250,150 +415,10 @@ function EditProductForm({
           </Button>
         </div>
 
-        <div className="md:col-span-2 border border-navy/10 p-4">
-          <div className="flex items-center justify-between">
-            <h2>Varyantlar</h2>
-            <Button
-              type="button"
-              size="sm"
-              variant="outlineGold"
-              onClick={() => setVariants((prev) => [...prev, createEmptyVariant()])}
-            >
-              <Plus className="mr-1 size-4" />
-              Varyant Ekle
-            </Button>
-          </div>
-
-          <div className="mt-3 space-y-3">
-            {variants.map((variant, index) => (
-              <div
-                key={`${variant.sku}-${index}`}
-                className="grid grid-cols-1 gap-2 border border-navy/10 p-3 md:grid-cols-7"
-              >
-                <Input
-                  placeholder="SKU"
-                  value={variant.sku}
-                  onChange={(event) =>
-                    setVariants((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, sku: event.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <Input
-                  placeholder="Renk"
-                  value={variant.color}
-                  onChange={(event) =>
-                    setVariants((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, color: event.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <Input
-                  placeholder="Beden"
-                  value={variant.size}
-                  onChange={(event) =>
-                    setVariants((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, size: event.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <Input
-                  placeholder="Fiyat"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={variant.price}
-                  onChange={(event) =>
-                    setVariants((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, price: event.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <Input
-                  placeholder="Stok"
-                  type="number"
-                  min={0}
-                  value={variant.stock}
-                  onChange={(event) =>
-                    setVariants((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, stock: event.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <div className="space-y-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) =>
-                      setVariants((prev) =>
-                        prev.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                ...item,
-                                imageFile: event.target.files?.[0] ?? null,
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                  <p className="text-xs text-navy/50">
-                    {variant.imageFile
-                      ? variant.imageFile.name
-                      : variant.imageStorageId
-                        ? "Yuklu gorsel"
-                        : "Gorsel secilmedi"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={variant.isActive ? "default" : "outlineGold"}
-                    onClick={() =>
-                      setVariants((prev) =>
-                        prev.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, isActive: !item.isActive }
-                            : item,
-                        ),
-                      )
-                    }
-                  >
-                    {variant.isActive ? "Aktif" : "Pasif"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="danger"
-                    onClick={() =>
-                      setVariants((prev) =>
-                        prev.length === 1
-                          ? [createEmptyVariant()]
-                          : prev.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <VaryantEditor variants={variants} setVariants={setVariants} />
 
         <div className="md:col-span-2">
-          <Button type="submit">Kaydet</Button>
+          <Button type="submit" size="lg">Kaydet</Button>
         </div>
       </form>
     </section>

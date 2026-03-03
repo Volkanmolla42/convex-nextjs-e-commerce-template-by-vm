@@ -10,6 +10,7 @@
 
 import type * as addresses from "../addresses.js";
 import type * as admin from "../admin.js";
+import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as cart from "../cart.js";
 import type * as catalog from "../catalog.js";
@@ -34,6 +35,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   addresses: typeof addresses;
   admin: typeof admin;
+  analytics: typeof analytics;
   auth: typeof auth;
   cart: typeof cart;
   catalog: typeof catalog;

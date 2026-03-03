@@ -39,28 +39,30 @@ export default function YonetimUrunlerPageClient({
   }
 
   return (
-    <section className="border border-navy/10 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1>Urunler</h1>
-        <Button asChild>
+    <section className="rounded-lg border border-border bg-background p-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl">Urunler</h1>
+        <Button asChild size="lg">
           <Link href="/yonetim/urun-ekle">Yeni Urun</Link>
         </Button>
       </div>
 
-      {products.length === 0 ? (
-        <p className="mt-4 text-sm text-navy/60">Urun yok</p>
+      {products.page.length === 0 ? (
+        <p className="mt-6 text-sm text-muted-foreground">Urun yok</p>
       ) : (
-        <div className="mt-4 space-y-3">
-          {products.map((product) => (
+        <div className="mt-6 space-y-3">
+          {products.page.map((product) => (
             <article
               key={product._id}
-              className="flex flex-col gap-3 border border-navy/10 p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
-                <h3>{product.name}</h3>
-                <p className="text-sm text-navy/60">{product.categoryName || "Kategori yok"}</p>
-                <p className="text-sm text-navy/60">Varyant: {product.variantCount ?? 0}</p>
-                <p className="text-sm text-navy/60">{formatPrice(product.price)}</p>
+              <div className="flex-1 space-y-1">
+                <h3 className="font-medium">{product.name}</h3>
+                <p className="text-sm text-muted-foreground">{product.categoryName || "Kategori yok"}</p>
+                <div className="flex gap-4">
+                  <p className="text-sm text-muted-foreground">Varyant: {product.variantCount ?? 0}</p>
+                  <p className="text-sm font-medium text-primary">{formatPrice(product.price)}</p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button asChild size="sm" variant="outlineGold">

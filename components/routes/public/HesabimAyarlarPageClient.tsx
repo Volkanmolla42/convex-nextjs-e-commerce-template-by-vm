@@ -105,11 +105,14 @@ export default function HesabimAyarlarPageClient({
           <div className="space-y-6 sm:space-y-8">
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
               <div className="md:w-1/3">
-                <label className="text-navy/40 text-xs tracking-200 uppercase">Ad Soyad</label>
+                <label htmlFor="hesabim-ad-soyad" className="text-navy/40 text-xs tracking-200 uppercase">
+                  Ad Soyad
+                </label>
               </div>
               <div className="md:w-2/3">
                 {isEditing ? (
                   <Input
+                    id="hesabim-ad-soyad"
                     type="text"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
@@ -126,7 +129,7 @@ export default function HesabimAyarlarPageClient({
 
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
               <div className="md:w-1/3">
-                <label className="text-navy/40 text-xs tracking-200 uppercase">E-posta</label>
+                <p className="text-navy/40 text-xs tracking-200 uppercase">E-posta</p>
               </div>
               <div className="md:w-2/3">
                 <p className="text-navy/60 text-base pb-3 border-b border-transparent flex items-center gap-2">

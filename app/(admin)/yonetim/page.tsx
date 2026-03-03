@@ -9,8 +9,8 @@ export default async function YonetimPanelPage() {
   const [preloadedUser, preloadedCategories, preloadedProducts, preloadedOrders] = await Promise.all([
     preloadQuery(api.userFunctions.currentUser, {}, { token }),
     preloadQuery(api.admin.listAdminCategories, {}, { token }),
-    preloadQuery(api.admin.listAdminProducts, {}, { token }),
-    preloadQuery(api.admin.listAdminOrders, {}, { token }),
+    preloadQuery(api.admin.listAdminProducts, { paginationOpts: { numItems: 10, cursor: null } }, { token }),
+    preloadQuery(api.admin.listAdminOrders, { paginationOpts: { numItems: 10, cursor: null } }, { token }),
   ]);
 
   return (

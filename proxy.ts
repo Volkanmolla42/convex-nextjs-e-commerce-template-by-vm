@@ -5,7 +5,7 @@ import {
 } from "@convex-dev/auth/nextjs/server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
-import { isAdminEmail } from "@/lib/admin";
+import { isAdmin } from "@/lib/admin";
 
 const isSignInPage = createRouteMatcher(["/giris"]);
 const isAdminRoute = createRouteMatcher(["/yonetim(.*)"]);
@@ -30,7 +30,7 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
 
   try {
     const user = await fetchQuery(api.userFunctions.currentUser, {}, { token });
-    if (!isAdminEmail(user?.email)) {
+    if (!isAdmin(user)) {
       return nextjsMiddlewareRedirect(request, "/");
     }
   } catch {

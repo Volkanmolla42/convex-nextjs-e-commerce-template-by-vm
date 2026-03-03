@@ -91,11 +91,11 @@ export default function YonetimKategorilerPageClient({
   }
 
   return (
-    <div className="space-y-4">
-      <section className="border border-navy/10 p-4 sm:p-6">
-        <h1>Kategoriler</h1>
+    <div className="space-y-6">
+      <section className="rounded-lg border border-border bg-background p-6">
+        <h1 className="text-2xl">{editingId ? "Kategori Duzenle" : "Yeni Kategori"}</h1>
 
-        <form className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3" onSubmit={onSubmit}>
+        <form className="mt-6 grid gap-4 md:grid-cols-3" onSubmit={onSubmit}>
           <div className="space-y-2">
             <Label htmlFor="name">Kategori Adi</Label>
             <Input
@@ -127,12 +127,13 @@ export default function YonetimKategorilerPageClient({
               }
             />
           </div>
-          <div className="md:col-span-3 flex gap-2">
-            <Button type="submit">{editingId ? "Kategoriyi Guncelle" : "Kategori Ekle"}</Button>
+          <div className="md:col-span-3 flex gap-3">
+            <Button type="submit" size="lg">{editingId ? "Guncelle" : "Ekle"}</Button>
             {editingId ? (
               <Button
                 type="button"
                 variant="outlineGold"
+                size="lg"
                 onClick={() => {
                   setEditingId(null);
                   setForm(emptyForm);
@@ -145,20 +146,21 @@ export default function YonetimKategorilerPageClient({
         </form>
       </section>
 
-      <section className="border border-navy/10 p-4 sm:p-6">
-        <h2>Kategori Listesi</h2>
+      <section className="rounded-lg border border-border bg-background p-6">
+        <h2 className="text-xl">Kategori Listesi</h2>
         {categories.length === 0 ? (
-          <p className="mt-3 text-sm text-navy/60">Kategori yok</p>
+          <p className="mt-4 text-sm text-muted-foreground">Kategori yok</p>
         ) : (
           <div className="mt-4 space-y-3">
             {categories.map((category) => (
               <article
                 key={category._id}
-                className="flex flex-col gap-3 border border-navy/10 p-3 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
-                  <h3>{category.name}</h3>
-                  <p className="text-sm text-navy/60">{category.description || "Aciklama yok"}</p>
+                <div className="flex-1">
+                  <h3 className="font-medium">{category.name}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{category.description || "Aciklama yok"}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Sira: {category.sortOrder}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button

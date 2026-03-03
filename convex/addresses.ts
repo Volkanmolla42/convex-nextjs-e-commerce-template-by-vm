@@ -3,17 +3,9 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { getRequiredUserId } from "./helpers";
 
 type AnyCtx = MutationCtx | QueryCtx;
-
-async function getRequiredUserId(ctx: AnyCtx): Promise<Id<"users">> {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) {
-    throw new Error("Giris gerekli");
-  }
-
-  return userId;
-}
 
 function normalizeField(value: string) {
   return value.trim();

@@ -5,6 +5,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { sanitizeText, slugify } from "./helpers";
 import { assertAdmin } from "./permissions";
 import { resolveVariantImageUrl } from "./productImages";
+import { paginationOptsValidator } from "convex/server";
 
 type AnyCtx = QueryCtx | MutationCtx;
 
@@ -94,7 +95,7 @@ async function assertVariantSkusAvailable(
 
 async function assertVariantImagesExist(ctx: MutationCtx, variants: NormalizedVariant[]) {
   for (const variant of variants) {
-    const imageExists = await ctx.storage.getMetadata(variant.imageStorageId);
+    const imageExists = await ctx.db.system.get(variant.imageStorageId);
     if (!imageExists) {
       throw new Error(`Varyant gorseli bulunamadi: ${variant.sku}`);
     }
@@ -300,19 +301,19 @@ export const getById = query({
 });
 
 export const listAdmin = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
     await assertAdmin(ctx);
 
-    const [products, categoryMap] = await Promise.all([
-      ctx.db.query("products").collect(),
-      getCategoryMap(ctx),
-    ]);
+    const categoryMap = await getCategoryMap(ctx);
 
-    const sorted = sortProducts(products);
+    const result = await ctx.db
+      .query("products")
+      .order("desc")
+      .paginate(args.paginationOpts);
 
-    return await Promise.all(
-      sorted.map(async (product) => {
+    const productsWithDetails = await Promise.all(
+      result.page.map(async (product) => {
         const [category, variants] = await Promise.all([
           categoryMap.get(product.categoryId),
           getProductVariants(ctx, product._id, true),
@@ -336,6 +337,11 @@ export const listAdmin = query({
         };
       }),
     );
+
+    return {
+      ...result,
+      page: productsWithDetails,
+    };
   },
 });
 

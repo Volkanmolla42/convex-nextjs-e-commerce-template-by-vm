@@ -245,7 +245,6 @@ Do not postpone technical debt.
 - Follow typography scale.
 - Follow color system.
 - Always use shadcn components for any UI primitives or elements.
-- Do not invent new patterns unnecessarily.
 
 ## 10.3 UI Text Minimalism (Strict)
 

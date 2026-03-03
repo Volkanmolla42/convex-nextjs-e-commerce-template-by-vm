@@ -1,8 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { assertAdmin } from "./permissions";
 import {
   calculateDiscount,
@@ -10,42 +8,15 @@ import {
   calculateShippingFee,
 } from "./pricing";
 import { resolveVariantImageUrl } from "./productImages";
+import { getRequiredUserId, getVariantLabel, findActiveCartByUserId } from "./helpers";
+import { paginationOptsValidator } from "convex/server";
 
 const ORDER_CURRENCY = "TRY";
-
-type AnyCtx = QueryCtx | MutationCtx;
 
 function generateOrderNo() {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `SP-${timestamp}-${random}`;
-}
-
-function getVariantLabel(attributes: Record<string, string>, sku: string) {
-  const parts = Object.entries(attributes).map(([key, value]) => `${key}: ${value}`);
-  if (parts.length === 0) {
-    return sku;
-  }
-
-  return parts.join(" / ");
-}
-
-async function getRequiredUserId(ctx: AnyCtx): Promise<Id<"users">> {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) {
-    throw new Error("Giris gerekli");
-  }
-
-  return userId;
-}
-
-async function findActiveCartByUserId(ctx: AnyCtx, userId: Id<"users">) {
-  return await ctx.db
-    .query("carts")
-    .withIndex("userId_status", (queryBuilder) =>
-      queryBuilder.eq("userId", userId).eq("status", "active"),
-    )
-    .first();
 }
 
 export const createFromActiveCart = mutation({
@@ -190,18 +161,20 @@ export const listMine = query({
 });
 
 export const listAdmin = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
     await assertAdmin(ctx);
 
-    const orders = await ctx.db.query("orders").collect();
-    const sorted = orders.sort((a, b) => b.createdAt - a.createdAt);
+    const result = await ctx.db
+      .query("orders")
+      .order("desc")
+      .paginate(args.paginationOpts);
 
-    return await Promise.all(
-      sorted.map(async (order) => {
+    const ordersWithDetails = await Promise.all(
+      result.page.map(async (order) => {
         const items = await ctx.db
           .query("orderItems")
-          .withIndex("orderId", (queryBuilder) => queryBuilder.eq("orderId", order._id))
+          .withIndex("orderId", (q) => q.eq("orderId", order._id))
           .collect();
 
         const user = await ctx.db.get(order.userId);
@@ -212,5 +185,62 @@ export const listAdmin = query({
         };
       }),
     );
+
+    return {
+      ...result,
+      page: ordersWithDetails,
+    };
+  },
+});
+
+export const updateStatus = mutation({
+  args: {
+    orderId: v.id("orders"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("paid"),
+      v.literal("shipped"),
+      v.literal("cancelled"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+
+    const order = await ctx.db.get(args.orderId);
+    if (!order) {
+      throw new Error("Siparis bulunamadi");
+    }
+
+    await ctx.db.patch(args.orderId, {
+      status: args.status,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const getById = query({
+  args: {
+    orderId: v.id("orders"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getRequiredUserId(ctx);
+
+    const order = await ctx.db.get(args.orderId);
+    if (!order) {
+      throw new Error("Siparis bulunamadi");
+    }
+
+    if (order.userId !== userId) {
+      throw new Error("Yetkisiz");
+    }
+
+    const items = await ctx.db
+      .query("orderItems")
+      .withIndex("orderId", (q) => q.eq("orderId", order._id))
+      .collect();
+
+    return { ...order, items };
   },
 });

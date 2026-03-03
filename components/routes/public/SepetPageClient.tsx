@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { type Preloaded, useMutation, usePreloadedQuery } from "convex/react";
@@ -35,7 +34,7 @@ export default function SepetPageClient({ preloadedCart }: SepetPageClientProps)
   const shipping = cart?.shippingFee ?? 0;
   const total = cart?.payableTotal ?? 0;
 
-  const canCheckout = useMemo(() => items.length > 0, [items.length]);
+  const canCheckout = items.length > 0;
 
   async function onIncrease(cartItemId: Id<"cartItems">, currentQuantity: number) {
     try {

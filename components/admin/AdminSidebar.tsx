@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, FolderTree, LayoutDashboard, PackagePlus, ReceiptText } from "lucide-react";
+import { Box, FolderTree, LayoutDashboard, MessageSquare, PackagePlus, ReceiptText, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const adminLinks = [
@@ -11,13 +11,15 @@ const adminLinks = [
   { href: "/yonetim/urunler", label: "Urunler", icon: Box },
   { href: "/yonetim/kategoriler", label: "Kategoriler", icon: FolderTree },
   { href: "/yonetim/siparisler", label: "Siparisler", icon: ReceiptText },
+  { href: "/yonetim/yorumlar", label: "Yorumlar", icon: MessageSquare },
+  { href: "/yonetim/kullanicilar", label: "Kullanicilar", icon: Users },
 ];
 
 export default function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-full border border-navy/10 p-3 lg:w-64 lg:shrink-0">
+    <aside className="w-full rounded-lg border border-border bg-background p-4 lg:w-64 lg:shrink-0">
       <nav className="flex flex-col gap-2">
         {adminLinks.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);

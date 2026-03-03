@@ -1,9 +1,3 @@
-const ADMIN_EMAIL = "volkanmolla11@gmail.com";
-
-export function isAdminEmail(email: string | null | undefined) {
-  if (!email) {
-    return false;
-  }
-
-  return email.toLowerCase() === ADMIN_EMAIL;
+export function isAdmin(user: { role?: "customer" | "admin" } | null | undefined) {
+  return user?.role === "admin";
 }

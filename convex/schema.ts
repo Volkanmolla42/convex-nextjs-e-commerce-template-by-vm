@@ -198,4 +198,25 @@ export default defineSchema({
     .index("userId", ["userId"])
     .index("role", ["role"])
     .index("createdAt", ["createdAt"]),
+  productViews: defineTable({
+    productId: v.id("products"),
+    userId: v.optional(v.id("users")),
+    viewedAt: v.number(),
+  })
+    .index("productId", ["productId"])
+    .index("userId", ["userId"])
+    .index("viewedAt", ["viewedAt"])
+    .index("productId_viewedAt", ["productId", "viewedAt"]),
+  cartEvents: defineTable({
+    productId: v.id("products"),
+    variantId: v.id("productVariants"),
+    quantity: v.number(),
+    userId: v.optional(v.id("users")),
+    eventType: v.union(v.literal("add"), v.literal("remove")),
+    createdAt: v.number(),
+  })
+    .index("productId", ["productId"])
+    .index("userId", ["userId"])
+    .index("createdAt", ["createdAt"])
+    .index("eventType_createdAt", ["eventType", "createdAt"]),
 });

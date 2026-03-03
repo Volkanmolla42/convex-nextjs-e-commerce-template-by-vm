@@ -10,35 +10,9 @@ import {
   calculateShippingFee,
 } from "./pricing";
 import { resolveVariantImageUrl } from "./productImages";
+import { getRequiredUserId, getVariantLabel, findActiveCartByUserId } from "./helpers";
 
 type AnyCtx = QueryCtx | MutationCtx;
-
-function getVariantLabel(attributes: Record<string, string>, sku: string) {
-  const parts = Object.entries(attributes).map(([key, value]) => `${key}: ${value}`);
-  if (parts.length === 0) {
-    return sku;
-  }
-
-  return parts.join(" / ");
-}
-
-async function getRequiredUserId(ctx: AnyCtx) {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) {
-    throw new Error("Giris gerekli");
-  }
-
-  return userId;
-}
-
-async function findActiveCartByUserId(ctx: AnyCtx, userId: Id<"users">) {
-  return await ctx.db
-    .query("carts")
-    .withIndex("userId_status", (queryBuilder) =>
-      queryBuilder.eq("userId", userId).eq("status", "active"),
-    )
-    .first();
-}
 
 async function ensureActiveCart(ctx: MutationCtx, userId: Id<"users">) {
   const existing = await findActiveCartByUserId(ctx, userId);

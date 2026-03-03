@@ -3,6 +3,8 @@ import type { Doc } from "./_generated/dataModel";
 
 type AnyCtx = QueryCtx | MutationCtx;
 
+const PLACEHOLDER_IMAGE = "https://placehold.co/800x1000/e8e4dc/1a1a1a?text=Gorsel+Yok";
+
 export async function resolveVariantImageUrl(
   ctx: AnyCtx,
   variant: Doc<"productVariants">,
@@ -12,5 +14,5 @@ export async function resolveVariantImageUrl(
     return storageUrl;
   }
 
-  return "";
+  return PLACEHOLDER_IMAGE;
 }
